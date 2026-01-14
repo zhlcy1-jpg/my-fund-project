@@ -1,37 +1,32 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
-    // 這是華僑銀行後台數據庫的真實地址
-    const apiUrl = "https://lt.morningstar.com/api/rest.svc/klr5run9sn/security/realtime/f00000v9zp";
-    
-    // 這是給數據庫的指令：我要 USD 貨幣，而且一次要 500 條
-    const config = {
-        params: {
-            "instid": "OCBCMACAU",
-            "id": "F00000V9ZP",
-            "currencyId": "USD",
-            "pageSize": 500,
-            "page": 1,
-            "sortOrder": "Name ASC"
-        }
-    };
+  // 設置網址和參數
+  const apiUrl = "https://lt.morningstar.com/api/rest.svc/klr5run9sn/security/realtime/f00000v9zp";
+  
+  const params = {
+    "instid": "OCBCMACAU",
+    "id": "F00000V9ZP",
+    "currencyId": "USD",
+    "pageSize": 500,  // 一次性抓取 500 支基金，不需翻頁
+    "page": 1,
+    "sortOrder": "Name ASC"
+  };
 
-    try {
-        console.log("正在從 Morningstar 抓取數據...");
-        const response = await axios.get(apiUrl, config);
-        
-        // 成功時，把數據傳回給你的瀏覽器
-        res.status(200).json({
-            status: "success",
-            count: response.data.rows ? response.data.rows.length : 0,
-            data: response.data.rows
-        });
-    } catch (error) {
-        // 失敗時，顯示原因
-        console.error("抓取失敗:", error.message);
-        res.status(500).json({ 
-            status: "error", 
-            message: "無法獲取數據，請檢查 API 地址或網路" 
-        });
-    }
+  try {
+    const response = await axios.get(apiUrl, { params });
+    
+    // 設置瀏覽器允許跨域（方便之後 Excel 讀取）
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/json');
+
+    // 直接返回抓到的所有行數據
+    res.status(200).json(response.data.rows || []);
+  } catch (error) {
+    console.error("抓取失敗:", error.message);
+    res.status(500).json({ 
+      error: "數據抓取失敗", 
+      details: error.message 
+    });
+  }
 }
