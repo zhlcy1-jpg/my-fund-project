@@ -1,31 +1,35 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
-  // 設置網址和參數
   const apiUrl = "https://lt.morningstar.com/api/rest.svc/klr5run9sn/security/realtime/f00000v9zp";
   
-  const params = {
-    "instid": "OCBCMACAU",
-    "id": "F00000V9ZP",
-    "currencyId": "USD",
-    "pageSize": 500,  // 一次性抓取 500 支基金，不需翻頁
-    "page": 1,
-    "sortOrder": "Name ASC"
-  };
-
   try {
-    const response = await axios.get(apiUrl, { params });
-    
-    // 設置瀏覽器允許跨域（方便之後 Excel 讀取）
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
+    const response = await axios.get(apiUrl, {
+      params: {
+        "instid": "OCBCMACAU",
+        "id": "F00000V9ZP",
+        "currencyId": "USD",
+        "pageSize": 500,
+        "page": 1,
+        "sortOrder": "Name ASC"
+      },
+      // 關鍵步驟：加入 Header 偽裝成普通 Chrome 瀏覽器
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://www.ocbc.com.mo/'
+      },
+      timeout: 10000 // 設置 10 秒超時，防止伺服器卡死
+    });
 
-    // 直接返回抓到的所有行數據
+    // 允許 Excel 跨域讀取
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(200).json(response.data.rows || []);
+    
   } catch (error) {
-    console.error("抓取失敗:", error.message);
+    console.error("抓取出錯:", error.message);
     res.status(500).json({ 
-      error: "數據抓取失敗", 
+      error: "伺服器暫時無法讀取數據", 
       details: error.message 
     });
   }
